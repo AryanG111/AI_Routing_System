@@ -1,19 +1,22 @@
 # config.py
 import os
-from openai import OpenAI
+import google.generativeai as genai
+from dotenv import load_dotenv
 
-# 1. PASTE YOUR GEMINI KEY HERE
-# (Keep this safe! Don't share this file publicly)
-GEMINI_API_KEY = "AIzaSyC-6lsc_pQ0Fm3ypLXrKhCeDbOhjA_yexs" 
+# Load environment variables from .env file
+load_dotenv()
+
+# 1. Get API Key from Environment Variable
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+if not GEMINI_API_KEY:
+    raise ValueError("GEMINI_API_KEY not found. Please set it in the .env file.")
 
 # 2. Configure the Client to point to Google
-client = OpenAI(
-    api_key=GEMINI_API_KEY,
-    base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
-)
+genai.configure(api_key=GEMINI_API_KEY)
 
 # 3. Define Models
-# We use Gemini 1.5 Flash for everything because it's fast and free.
+# We use Gemini 2.0 Flash as it is available and performant.
 # You can switch the SMART model to "gemini-1.5-pro" if you need higher intelligence later.
-MODEL_SMART = "gemini-1.5-flash"
-MODEL_FAST = "gemini-1.5-flash"
+MODEL_SMART = "gemini-2.0-flash"
+MODEL_FAST = "gemini-2.0-flash"

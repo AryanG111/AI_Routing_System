@@ -1,23 +1,22 @@
 # core_logic.py
 import json
-import re
-from config import client, MODEL_SMART, MODEL_FAST
+import google.generativeai as genai
+from config import MODEL_SMART, MODEL_FAST
 from prompts import ROUTER_SYSTEM_PROMPT, AGENT_PROMPTS, MERGER_SYSTEM_PROMPT
 
 class Router:
     def route(self, query):
         """Decides which agents to call."""
         try:
-            response = client.chat.completions.create(
-                model=MODEL_SMART,
-                messages=[
-                    {"role": "system", "content": ROUTER_SYSTEM_PROMPT},
-                    {"role": "user", "content": query}
-                ],
-                response_format={"type": "json_object"}
+            model = genai.GenerativeModel(
+                model_name=MODEL_SMART,
+                system_instruction=ROUTER_SYSTEM_PROMPT,
+                generation_config={"response_mime_type": "application/json"}
             )
             
-            content = response.choices[0].message.content
+            response = model.generate_content(query)
+            
+            content = response.text
             data = json.loads(content)
             return data.get("selected_agents", [])
             
@@ -33,14 +32,15 @@ class SpecializedAgent:
 
     def run(self, query):
         """Generates a specific expert response."""
-        response = client.chat.completions.create(
-            model=MODEL_FAST,
-            messages=[
-                {"role": "system", "content": self.system_prompt},
-                {"role": "user", "content": query}
-            ]
-        )
-        return response.choices[0].message.content
+        try:
+            model = genai.GenerativeModel(
+                model_name=MODEL_FAST,
+                system_instruction=self.system_prompt
+            )
+            response = model.generate_content(query)
+            return response.text
+        except Exception as e:
+            return f"Error in agent {self.agent_id}: {str(e)}"
 
 class Merger:
     def merge(self, query, agent_responses):
@@ -53,11 +53,12 @@ class Merger:
 
         prompt = f"User Query: {query}\n\nExpert Reports:{combined_text}"
 
-        response = client.chat.completions.create(
-            model=MODEL_SMART,
-            messages=[
-                {"role": "system", "content": MERGER_SYSTEM_PROMPT},
-                {"role": "user", "content": prompt}
-            ]
-        )
-        return response.choices[0].message.content  
+        try:
+            model = genai.GenerativeModel(
+                model_name=MODEL_SMART,
+                system_instruction=MERGER_SYSTEM_PROMPT
+            )
+            response = model.generate_content(prompt)
+            return response.text
+        except Exception as e:
+            return f"Error in merger: {str(e)}"
